@@ -3,17 +3,25 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
  */
 
 'use strict';
+
+/*::
+type mTypeChecker = (props: {[string]:mixed}, propName: string, componentName: string, location: string, propFullName: string, secret: ?string) => bool
+type TypeChecker = (propsValue: mixed, i: number, componentName: string, location: string, propFullName: string, secret: string) => bool
+*/
 
 var assign = require('object-assign');
 
 var ReactPropTypesSecret = require('./lib/ReactPropTypesSecret');
 var checkPropTypes = require('./checkPropTypes');
 
+//$FlowFixMe
 var has = Function.call.bind(Object.prototype.hasOwnProperty);
-var printWarning = function() {};
+var printWarning = function(text/*: string*/) {};
 
 if (process.env.NODE_ENV !== 'production') {
   printWarning = function(text) {
@@ -30,11 +38,11 @@ if (process.env.NODE_ENV !== 'production') {
   };
 }
 
-function emptyFunctionThatReturnsNull() {
+function emptyFunctionThatReturnsNull(props/*: {}*/, propName/*: string*/, componentName/*: string*/, location/*: string*/, propFullName/*: string*/, secret/*: ?string*/) {
   return null;
 }
 
-module.exports = function(isValidElement, throwOnDirectAccess) {
+module.exports = function(isValidElement /*: (propsValue: mixed) => boolean*/, throwOnDirectAccess/*: boolean*/) {
   /* global Symbol */
   var ITERATOR_SYMBOL = typeof Symbol === 'function' && Symbol.iterator;
   var FAUX_ITERATOR_SYMBOL = '@@iterator'; // Before Symbol spec.
@@ -130,6 +138,9 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     oneOfType: createUnionTypeChecker,
     shape: createShapeTypeChecker,
     exact: createStrictShapeTypeChecker,
+
+    checkPropTypes: emptyFunctionThatReturnsNull,
+    PropTypes: {}
   };
 
   /**
@@ -142,6 +153,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     if (x === y) {
       // Steps 1-5, 7-10
       // Steps 6.b-6.e: +0 != -0
+      // $FlowFixMe
       return x !== 0 || 1 / x === 1 / y;
     } else {
       // Step 6.a: NaN == NaN
@@ -157,11 +169,12 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
    * is prohibitively expensive if they are created too often, such as what
    * happens in oneOfType() for any type before the one that matched.
    */
-  function PropTypeError(message) {
+  function PropTypeError(message/*: string*/) {
     this.message = message;
     this.stack = '';
   }
   // Make `instanceof Error` still work for returned errors.
+  // $FlowFixMe
   PropTypeError.prototype = Error.prototype;
 
   function createChainableTypeChecker(validate) {
@@ -169,7 +182,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
       var manualPropTypeCallCache = {};
       var manualPropTypeWarningCount = 0;
     }
-    function checkType(isRequired, props, propName, componentName, location, propFullName, secret) {
+    function checkType(isRequired/*: boolean*/, props/*: {[string]:mixed}*/, propName/*: string*/, componentName/*: string*/, location/*: string*/, propFullName/*: string*/, secret/*: string*/) {
       componentName = componentName || ANONYMOUS;
       propFullName = propFullName || propName;
 
@@ -243,7 +256,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(emptyFunctionThatReturnsNull);
   }
 
-  function createArrayOfTypeChecker(typeChecker) {
+  function createArrayOfTypeChecker(typeChecker/*: TypeChecker*/) {
     function validate(props, propName, componentName, location, propFullName) {
       if (typeof typeChecker !== 'function') {
         return new PropTypeError('Property `' + propFullName + '` of component `' + componentName + '` has invalid PropType notation inside arrayOf.');
@@ -276,7 +289,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
-  function createInstanceTypeChecker(expectedClass) {
+  function createInstanceTypeChecker(expectedClass/*: Function*/) {
     function validate(props, propName, componentName, location, propFullName) {
       if (!(props[propName] instanceof expectedClass)) {
         var expectedClassName = expectedClass.name || ANONYMOUS;
@@ -288,7 +301,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
-  function createEnumTypeChecker(expectedValues) {
+  function createEnumTypeChecker(expectedValues/*: Array<mTypeChecker>*/) {
     if (!Array.isArray(expectedValues)) {
       process.env.NODE_ENV !== 'production' ? printWarning('Invalid argument supplied to oneOf, expected an instance of array.') : void 0;
       return emptyFunctionThatReturnsNull;
@@ -303,12 +316,13 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
       }
 
       var valuesString = JSON.stringify(expectedValues);
+      //$FlowFixMe
       return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of value `' + propValue + '` ' + ('supplied to `' + componentName + '`, expected one of ' + valuesString + '.'));
     }
     return createChainableTypeChecker(validate);
   }
 
-  function createObjectOfTypeChecker(typeChecker) {
+  function createObjectOfTypeChecker(typeChecker/*: TypeChecker */) {
     function validate(props, propName, componentName, location, propFullName) {
       if (typeof typeChecker !== 'function') {
         return new PropTypeError('Property `' + propFullName + '` of component `' + componentName + '` has invalid PropType notation inside objectOf.');
@@ -318,11 +332,13 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
       if (propType !== 'object') {
         return new PropTypeError('Invalid ' + location + ' `' + propFullName + '` of type ' + ('`' + propType + '` supplied to `' + componentName + '`, expected an object.'));
       }
-      for (var key in propValue) {
-        if (has(propValue, key)) {
-          var error = typeChecker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret);
-          if (error instanceof Error) {
-            return error;
+      if (typeof propValue === 'object') {
+        for (var key in propValue) {
+          if (has(propValue, key)) {
+            var error = typeChecker(propValue, key, componentName, location, propFullName + '.' + key, ReactPropTypesSecret);
+            if (error instanceof Error) {
+              return error;
+            }
           }
         }
       }
@@ -331,7 +347,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
-  function createUnionTypeChecker(arrayOfTypeCheckers) {
+  function createUnionTypeChecker(arrayOfTypeCheckers/*: Array<mTypeChecker> */) {
     if (!Array.isArray(arrayOfTypeCheckers)) {
       process.env.NODE_ENV !== 'production' ? printWarning('Invalid argument supplied to oneOfType, expected an instance of array.') : void 0;
       return emptyFunctionThatReturnsNull;
@@ -371,7 +387,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
-  function createShapeTypeChecker(shapeTypes) {
+  function createShapeTypeChecker(shapeTypes/*: {[string]:mTypeChecker}*/) {
     function validate(props, propName, componentName, location, propFullName) {
       var propValue = props[propName];
       var propType = getPropType(propValue);
@@ -393,7 +409,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
-  function createStrictShapeTypeChecker(shapeTypes) {
+  function createStrictShapeTypeChecker(shapeTypes/*: {[string]:mTypeChecker}*/) {
     function validate(props, propName, componentName, location, propFullName) {
       var propValue = props[propName];
       var propType = getPropType(propValue);
@@ -423,7 +439,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
     return createChainableTypeChecker(validate);
   }
 
-  function isNode(propValue) {
+  function isNode(propValue)/*: bool*/ {
     switch (typeof propValue) {
       case 'number':
       case 'string':

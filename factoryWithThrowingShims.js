@@ -3,6 +3,8 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
  */
 
 'use strict';
@@ -12,7 +14,7 @@ var ReactPropTypesSecret = require('./lib/ReactPropTypesSecret');
 function emptyFunction() {}
 
 module.exports = function() {
-  function shim(props, propName, componentName, location, propFullName, secret) {
+  function shim(props /*: {}*/, propName /*: string*/, componentName /*: string*/, location /*: string*/, propFullName/*: string*/, secret/*: string*/) {
     if (secret === ReactPropTypesSecret) {
       // It is still safe when called from React.
       return;
@@ -49,10 +51,13 @@ module.exports = function() {
     oneOf: getShim,
     oneOfType: getShim,
     shape: getShim,
-    exact: getShim
+    exact: getShim,
+
+    checkPropTypes: emptyFunction,
+    PropTypes: {}
   };
 
-  ReactPropTypes.checkPropTypes = emptyFunction;
+  // ReactPropTypes.checkPropTypes = emptyFunction;
   ReactPropTypes.PropTypes = ReactPropTypes;
 
   return ReactPropTypes;

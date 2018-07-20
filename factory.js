@@ -3,6 +3,8 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
  */
 
 'use strict';
@@ -12,7 +14,7 @@
 // However if one is migrating to the `prop-types` npm library, they will go through the
 // `index.js` entry point, and it will branch depending on the environment.
 var factory = require('./factoryWithTypeCheckers');
-module.exports = function(isValidElement) {
+module.exports = function(isValidElement/*: ()=> bool*/) {
   // It is still allowed in 15.5.
   var throwOnDirectAccess = false;
   return factory(isValidElement, throwOnDirectAccess);

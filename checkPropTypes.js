@@ -3,11 +3,17 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
  */
 
 'use strict';
 
-var printWarning = function() {};
+/*::
+type mTypeChecker = (props: {}, propName: string, componentName: string, location: string, propFullName: string|null, secret: ?string) => bool
+*/
+
+var printWarning = function(text/*: string*/) {};
 
 if (process.env.NODE_ENV !== 'production') {
   var ReactPropTypesSecret = require('./lib/ReactPropTypesSecret');
@@ -38,7 +44,7 @@ if (process.env.NODE_ENV !== 'production') {
  * @param {?Function} getStack Returns the component stack.
  * @private
  */
-function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
+function checkPropTypes(typeSpecs /*: {[string]:mTypeChecker}*/, values /*: {}*/, location /*: string*/, componentName /*: string*/, getStack /*: ?()=>void*/) {
   if (process.env.NODE_ENV !== 'production') {
     for (var typeSpecName in typeSpecs) {
       if (typeSpecs.hasOwnProperty(typeSpecName)) {
